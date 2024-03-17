@@ -5,13 +5,13 @@ from tensorflow.keras.models import load_model
 import pandas as pd
 
 # Load the emotion detection model
-emotion_model = load_model('modeldensenet.h5')
+emotion_model = load_model('modelvgg.h5')
 
 # Load the face cascade classifier
 face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
 
 # Define emotion labels
-emotion_dict = {0: "Angry", 1: "Happy", 2: "Sad", 3: "Surprise"}
+emotion_dict = {0: "angry", 1: "happy", 2: "sad", 3: "surprise"}
 
 # Define music distribution paths
 music_dist = {
@@ -23,7 +23,7 @@ music_dist = {
 
 # Function for reading video stream, generating prediction, and recommendations
 class VideoCamera:
-    def __init__(self):
+    def _init_(self):
         self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         self.show_text = [0]
 
@@ -35,8 +35,10 @@ class VideoCamera:
         image = cv2.resize(image, (600, 500))
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         face_rects = face_cascade.detectMultiScale(gray, 1.3, 5)
-        df1 = pd.read_csv(music_dist[self.show_text[0]])
-        df1 = df1[['Name', 'Album', 'Artist']].head(15)
+        df1 = self.music_rec()  # Call the music_rec method
+        df1 = pd.read_csv(music_dist[show_text[0]])
+        df1 = df1[['Name','Album','Artist']]
+        df1 = df1.head(15)
 
         for (x, y, w, h) in face_rects:
             cv2.rectangle(image, (x, y - 50), (x + w, y + h + 10), (0, 255, 0), 2)
@@ -53,9 +55,18 @@ class VideoCamera:
         frame = buffer.tobytes()
         return frame, df1
 
+    def music_rec(self):
+     try:
+        df = pd.read_csv(music_dist[self.show_text[0]])
+        df = df[['Name', 'Album', 'Artist']]
+        df = df.head(15)
+        return df
+     except FileNotFoundError:
+        print("CSV file not found for the emotion:", emotion_dict[self.show_text[0]])
+        return None
+
     def release(self):
         self.cap.release()
-
 
 # Main function to run the application
 def main():
@@ -66,10 +77,15 @@ def main():
         if frame is None or df1 is None:
             break
 
-        # Display frame and recommendations
+        # Display frame and recommendations if available
         cv2.imshow('Emotion Recognition', cv2.imdecode(np.frombuffer(frame, dtype=np.uint8), -1))
-        print(df1)  # Print recommendations
-
+        
+        # Check if df1 is None before calling head()
+        if df1 is not None:
+            print(df1.head(15))  # Print recommendations if available
+        else:
+            print("No music recommendations available.")
+        
         # Exit loop when 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -77,6 +93,5 @@ def main():
     camera.release()
     cv2.destroyAllWindows()
 
-
-if __name__ == '__main__':
+if _name_ == '_main_':
     main()
